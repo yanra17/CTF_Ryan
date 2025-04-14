@@ -19,7 +19,7 @@ I found a pretty common SSH service running on port 22 and a less usual **gRPC**
 But let's get back to our business. We tried to see if we could interact and grab some banners using `telnet` on the gRPC port. Nothing, except for an encoded message.
 
 
-![$alt text$](telnet.png)
+![$alt text$](./images/telnet.png)
 
 Our next task is to find a way to communicate with our target. After further research, we found a tool named `grpcurl`. "It's like curl, but for gRPC." Using this command:
 
@@ -40,19 +40,19 @@ We could then launch the next phase: gaining access to the system.
 I went through the app and went to the login page. My first thought was to try the famous *admin:admin* credentials to log in. To my surprise, it worked.
 
 
-![default credentials test](defaultcred1.png)
+![default credentials test](./images/defaultcred1.png)
 
 We’re given an ID (162) and a token, which seems to be a JWT token.
 
-![authenticated](id_token1.png)
+![authenticated](./images/id_token1.png)
 
 We use our resources to get the composition of this token:
 
-![alt text](image.png)
+![Our Jwt token](./images/JwtToken.png)
 
 Looking for vulnerabilities related to gRPC, we could see that it is prone to SQLi. That said, we attempted to use sqlmap with the **getInfo** endpoint (by retrieving the request). We retrieved the request made to the **getInfo** endpoint.
 
-![alt text](request.png)
+![HTTP Request to the getInfo endpoint](./images/request.png)
 
 Then, we launch our tool used to automate SQL injection testing using this command:
 
@@ -61,7 +61,7 @@ kali@kali:~ sqlmap -r request.txt
 ```
 It turns out to be successful and allows us to dump the password of a user (**sau**).
 
-![alt text](sqlmap_result.png)
+![Sqlmap output](./images/sqlmap_result.png)
 
 Attempting this via SSH is also successful. So, we gained access to our PC! Next step: looking through the system for any vulnerabilities that could allow us to escalate our privileges.
 
@@ -81,11 +81,11 @@ Guess what? It's definitely the case: something is running on port 8000 and on p
 Nevertheless, port 8000 is open only through the localhost address.
 
 
-![alt text](image-1.png)
+![Netstat](./images/netstat.png)
 
 We tried to communicate with these ports. There's nothing better than using telnet to try it. 
 
-![alt text](telnet_viaSSH.png)
+![Telnet within the server](./images/telnet_viaSSH.png)
 
 We are talking to an HTTP service.
 
@@ -105,11 +105,11 @@ kali@kali:~ ssh -L 9666:127.0.0.1:1234 sau@10.10.11.214 -N
 That's a pyLoad server. Looking for the version on the system, we found that it's **version 0.5.0**, and it's vulnerable to a pre-authenticated RCE (**CVE-2023-0297**).
 
 
-![alt text](pyLoad.png)
+![Pyload server](./images/pyLoad.png)
 
 We fetched a script here:
 
-![alt text](<Capture d'écran 2025-04-14 124902.png>)
+![CVE-2023-0297](./images/RepoExploit_Pyload.png)
 
 Right after, we set up everything we need for the exploit to work, which means:
 
@@ -119,10 +119,10 @@ Right after, we set up everything we need for the exploit to work, which means:
 And here we go!
 
 
-![alt text](exploitPyload.png)
+![exploit](./images/exploitPyload.png)
 
 That's a success; we're root!
 
-![alt text](root.png)
+![root](./images/root.png)
 
 We can now retrieve our flag from the /root directory.
